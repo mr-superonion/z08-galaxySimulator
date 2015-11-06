@@ -97,13 +97,10 @@ end subroutine
 
 
 subroutine getradius(image,ngrid,ratio,radius)
-! this subroutine is used to determine the Half Width Half Maximum of the image(if the image has ellipticity, it determines the long axis)
-! we first calculate the area of the pixel whose value is larger than 0.5*imax
-! and then calculate the radius using pi*a*b=S approximately
 implicit none
 real,parameter :: pi=acos(-1.)
-integer :: x,y,m, n
-real :: imax,area,ep1,ep2,ep,bsa
+integer :: x,y,m,n,rrr
+real :: imax,ep1,ep2,ep,bsa,sumim,sumcou
 real :: imagecount(ngrid,ngrid)
 real,intent(out) :: radius
 integer,intent(in) :: ngrid
@@ -113,17 +110,24 @@ real,intent(in) :: ratio
 
 call getmax(image,ngrid,imax,x,y)
 imagecount=0.
-forall(m=1:ngrid,n=1:ngrid,image(m,n)>=ratio*imax)
-	imagecount(m,n)=1.
-end forall
-
-area=sum(imagecount)
-call getep(ngrid,image,ep1,ep2)
-ep=sqrt(ep1**2.+ep2**2.)
-
-bsa=sqrt((1-ep)/(1+ep))
-radius=sqrt(area/bsa/pi)
-
+sumim=sum(image)
+radius=1.
+do rrr=1,2*ngrid
+	radius=radius+0.25
+	imagecount=0.
+	forall(m=1:ngrid,n=1:ngrid,(m-x)**2.+(n-y)**2.<=radius**2.)
+		imagecount(m,n)=image(m,n)
+	end forall
+	sumcou=sum(imagecount)
+	if (sumcou>ratio*sumim) then 
+		exit
+	end if		
+end do
+!call getep(ngrid,image,ep1,ep2)
+!ep=sqrt(ep1**2.+ep2**2.)
+!bsa=sqrt((1-ep)/(1+ep))
+!write(*,*) bsa
+!radius=radius/(1.+bsa)*2.
 return
 end subroutine
 

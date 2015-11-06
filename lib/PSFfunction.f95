@@ -4,11 +4,7 @@ implicit none
  real :: gauss
  real,intent(in) :: beta1,beta2
  real,intent(in) :: xgs,ygs
-!if ((xgs**2.+ygs**2.)<=25.*((beta1+beta2)/2.)**2.) then
 	gauss=1./(2.*pi*beta1*beta2)*exp((-0.5)*(xgs**2./beta1**2.+ygs**2./beta2**2.))
-!else
-!	gauss=0.
-!end if
 return
 end function
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -61,7 +57,7 @@ implicit none
 
 r2=x**2./rd1**2.+y**2./rd2**2.
 if (r2<=2.**2.) then
-	modffat=(1.+r2)**(-5.)
+	modffat=(1.+r2)**(-3.5)
 else
 	modffat=0.
 end if

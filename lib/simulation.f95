@@ -1,29 +1,27 @@
-subroutine galaxyGenerate(nstar,radius,xystar,sern)
+subroutine galaxyGenerate(nstar,radius,xystar,sern,rgal)
 implicit none
  real,parameter :: pi=acos(-1.)
  integer,intent(in) :: nstar
- real,intent(in) :: radius,sern
- real :: rstar,thetastar,xg,yg,sx,sy,xo,yo,xg0,yg0
+ real,intent(in) :: radius,sern,rgal
+ real :: rstar,rstar2,thetastar,xg,yg,sx,sy,xo,yo,bm
  real,external :: random_range
  real,intent(out) :: xystar(nstar,3)
  integer :: ig
 xystar=0.
 sx=0.
 sy=0.
-xg0=0.
-yg0=0.
+bm=2*sern-1./3.+4./405./sern
 do ig=1,nstar
-	rstar=random_range(0.,radius)
+	rstar=random_range(0.,radius**2.)
+	rstar=sqrt(rstar)
 	thetastar=random_range(0.0,2.*pi)
 	xg=rstar*cos(thetastar)
 	yg=rstar*sin(thetastar)
-	xg0=xg
-	yg0=yg
-	xystar(ig,1)=xg0
-	xystar(ig,2)=yg0
-	xystar(ig,3)=rstar*exp(-1*(rstar*25.)**(1./sern))
-	sx=sx+xg0
-	sy=sy+yg0
+	xystar(ig,1)=xg
+	xystar(ig,2)=yg
+	xystar(ig,3)=exp(-1.*bm*(rstar/rgal)**(1./sern))/nstar
+	sx=sx+xg
+	sy=sy+yg
 end do
 xo=sx/nstar
 yo=sy/nstar
@@ -74,8 +72,7 @@ end subroutine
 subroutine galaxyShear(nstar,gamma1,gamma2,xystars,xystars2)
 implicit none
 integer,intent(in) :: nstar
-real,intent(in) :: gamma1
-real,intent(in) ::gamma2
+real,intent(in) :: gamma1,gamma2
 real,intent(in) :: xystars(nstar,3)
 real,intent(out) :: xystars2(nstar,3)
 integer :: ig
@@ -100,14 +97,14 @@ integer :: i,j,k,t1,t2,xi,yi,r1,r2
 real,intent(in) :: x,y,rPSF1,rPSF2
 real,intent(in) :: xystar(nstar,3)
 real,intent(out) :: galaxy(ngrid,ngrid)
-real :: xp,yp,lum,xs,ys
+real :: xp,yp,xs,ys
 real,external :: gauss
 real,external :: modffat
 galaxy=0.
 xi=aint(x)
 yi=aint(y)
-r1=aint(rPSF1*2+3)
-r2=aint(rPSF2*2+3)
+r1=aint((rPSF1+1)*2.)+1
+r2=aint((rPSF2+1)*2.)+1
 do i=1,nstar
 	xs=xystar(i,1)
 	ys=xystar(i,2)
@@ -124,7 +121,6 @@ do i=1,nstar
 	end do
 	end do
 end do
-
 return
 end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
