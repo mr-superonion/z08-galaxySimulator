@@ -99,7 +99,7 @@ end subroutine
 subroutine getradius(image,ngrid,ratio,radius)
 implicit none
 real,parameter :: pi=acos(-1.)
-integer :: x,y,m,n,rrr
+integer :: x,y,m,n,rrr,maxradius
 real :: imax,ep1,ep2,ep,bsa,sumim,sumcou
 real :: imagecount(ngrid,ngrid)
 real,intent(out) :: radius
@@ -108,14 +108,16 @@ real,intent(in) :: image(ngrid,ngrid)
 real,intent(in) :: ratio
 
 
-call getmax(image,ngrid,imax,x,y)
-imagecount=0.
-sumim=sum(image)
-radius=1.
-do rrr=1,2*ngrid
-	radius=radius+0.25
+!call getmax(image,ngrid,imax,x,y)
+x=ngrid/2+1
+y=ngrid/2+1
+call getflux(image,ngrid,sumim,maxradius)
+! begin from HLR=2
+radius=3.
+do rrr=1,ngrid*ngrid
+	radius=radius+1.
 	imagecount=0.
-	forall(m=1:ngrid,n=1:ngrid,(m-x)**2.+(n-y)**2.<=radius**2.)
+	forall(m=1:ngrid,n=1:ngrid,(m-x)**2.+(n-y)**2.<=radius)
 		imagecount(m,n)=image(m,n)
 	end forall
 	sumcou=sum(imagecount)
@@ -123,6 +125,7 @@ do rrr=1,2*ngrid
 		exit
 	end if		
 end do
+radius=sqrt(radius)
 !call getep(ngrid,image,ep1,ep2)
 !ep=sqrt(ep1**2.+ep2**2.)
 !bsa=sqrt((1-ep)/(1+ep))
@@ -133,7 +136,43 @@ end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+subroutine getflux(image,ngrid,flux,maxradius)
+implicit none
+integer :: x,y,m,n,rrr
+real :: fluxr(ngrid/2-2)
+real :: imagecount(ngrid,ngrid)
+integer,intent(out) :: maxradius
+real,intent(out) :: flux
+integer,intent(in) :: ngrid
+real,intent(in) :: image(ngrid,ngrid)
 
+maxradius=ngrid/2-3
+!call getmax(image,ngrid,imax,x,y)
+x=ngrid/2+1
+y=ngrid/2+1
+fluxr=0.
+do rrr=2,ngrid/2-3
+	imagecount=0.
+	forall(m=1:ngrid,n=1:ngrid,(m-x)**2.+(n-y)**2.<=rrr**2.)
+		imagecount(m,n)=image(m,n)
+	end forall
+	fluxr(rrr)=sum(imagecount)
+	if (fluxr(rrr)<=fluxr(rrr-1)) then
+		maxradius=rrr-1 
+		exit
+	end if
+end do
+maxradius=max(maxradius,4)
+flux=fluxr(maxradius)
+!call getep(ngrid,image,ep1,ep2)
+!ep=sqrt(ep1**2.+ep2**2.)
+!bsa=sqrt((1-ep)/(1+ep))
+!write(*,*) bsa
+!radius=radius/(1.+bsa)*2.
+return
+end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine moment(data,n,ave,sdev)
 ! used to do statistics
@@ -168,15 +207,15 @@ real,intent(in) :: image(ngrid,ngrid)
 integer,intent(in) :: ngrid
 real,intent(out) :: SNR
 integer :: x,y,m,n,nn
-real :: ratio,imax,p,ave,radius
-ratio=.5
-call getmax(image,ngrid,imax,x,y)
+real :: ratio,imax,radius
+ratio=0.5
+!call getmax(image,ngrid,imax,x,y)
+x=ngrid/2+1
+y=ngrid/2+1
 call getradius(image,ngrid,ratio,radius)
-nn=0
-p=0.
 SNR=0.
-do n=y-aint(radius+0.5),y+aint(radius+0.5)
-do m=x-aint(radius+0.5),x+aint(radius+0.5)
+do n=y-aint(radius),y+aint(radius)
+do m=x-aint(radius),x+aint(radius)
 	nn=nn+1
 	SNR=SNR+image(m,n)
 end do

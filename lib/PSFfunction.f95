@@ -47,17 +47,20 @@ end if
 return
 end function
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function modffat(rd1,rd2,x,y)
+function modffat(re,mm,truncr,x,y)
 implicit none
 
  real :: modffat
  real,intent(in):: x,y
- real,intent(in) :: rd1,rd2
- real :: r2
+ real,intent(in) :: re,mm,truncr
+ real :: r2,Rp
 
-r2=x**2./rd1**2.+y**2./rd2**2.
-if (r2<=2.**2.) then
-	modffat=(1.+r2)**(-3.5)
+
+Rp=re/sqrt(2.**(1./(mm-1.))-1.)
+
+if (x**2.+y**2.<(truncr*re)**2.) then
+	r2=(x**2.+y**2.)/Rp**2.
+	modffat=(1.+r2)**(-1.*mm)
 else
 	modffat=0.
 end if

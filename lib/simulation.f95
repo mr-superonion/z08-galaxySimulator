@@ -3,13 +3,14 @@ implicit none
  real,parameter :: pi=acos(-1.)
  integer,intent(in) :: nstar
  real,intent(in) :: radius,sern,rgal
- real :: rstar,rstar2,thetastar,xg,yg,sx,sy,xo,yo,bm
+ real :: rstar,rstar2,thetastar,xg,yg,sx,sy,xo,yo,bm,sumflux
  real,external :: random_range
  real,intent(out) :: xystar(nstar,3)
  integer :: ig
 xystar=0.
 sx=0.
 sy=0.
+sumflux=0.
 bm=2*sern-1./3.+4./405./sern
 do ig=1,nstar
 	rstar=random_range(0.,radius**2.)
@@ -19,15 +20,17 @@ do ig=1,nstar
 	yg=rstar*sin(thetastar)
 	xystar(ig,1)=xg
 	xystar(ig,2)=yg
-	xystar(ig,3)=exp(-1.*bm*(rstar/rgal)**(1./sern))/nstar
-	sx=sx+xg
-	sy=sy+yg
+	xystar(ig,3)=exp(-1.*bm*(rstar/rgal)**(1./sern))
+	sx=sx+xg*exp(-1.*bm*(rstar/rgal)**(1./sern))
+	sy=sy+yg*exp(-1.*bm*(rstar/rgal)**(1./sern))
+	sumflux=sumflux+exp(-1.*bm*(rstar/rgal)**(1./sern))
 end do
-xo=sx/nstar
-yo=sy/nstar
+xo=sx/sumflux
+yo=sy/sumflux
 do ig=1,nstar
 	xystar(ig,1)=xystar(ig,1)-xo
-	xystar(ig,2)=xystar(ig,2)-yo	
+	xystar(ig,2)=xystar(ig,2)-yo
+	xystar(ig,3)=xystar(ig,3)/sumflux	
 end do
 
 return
@@ -47,21 +50,21 @@ return
 end function
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine galaxyRot(nstar,theta,xystarr)
+subroutine galaxyRot(nstar,theta,xystarr,xystarr22)
 implicit none
+real,intent(out) :: xystarr22(nstar,3)
 integer,intent(in) :: nstar
 real,intent(in) :: theta
-real,intent(inout) :: xystarr(nstar,3)
-real :: xystarr2(nstar,3)
+real,intent(in) :: xystarr(nstar,3)
 integer :: ig
 
-
+xystarr22=0.
 do ig=1,nstar
-	xystarr2(ig,1)=cos(theta)*xystarr(ig,1)-sin(theta)*xystarr(ig,2)
-	xystarr2(ig,2)=sin(theta)*xystarr(ig,1)+cos(theta)*xystarr(ig,2)
-	xystarr2(ig,3)=xystarr(ig,3)
+	xystarr22(ig,1)=cos(theta)*xystarr(ig,1)-sin(theta)*xystarr(ig,2)
+	xystarr22(ig,2)=sin(theta)*xystarr(ig,1)+cos(theta)*xystarr(ig,2)
+	xystarr22(ig,3)=xystarr(ig,3)
 end do
-xystarr=xystarr2
+
 
 return
 end subroutine
@@ -77,7 +80,7 @@ real,intent(in) :: xystars(nstar,3)
 real,intent(out) :: xystars2(nstar,3)
 integer :: ig
 
-
+xystars2=0.
 do ig=1,nstar
 	xystars2(ig,1)=(1+gamma1)*xystars(ig,1)+gamma2*xystars(ig,2)
 	xystars2(ig,2)=gamma2*xystars(ig,1)+(1-gamma1)*xystars(ig,2)
@@ -90,21 +93,23 @@ end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine galaxyinGrid(nstar,ngrid,x,y,rPSF1,rPSF2,xystar,galaxy)
+subroutine galaxyinGrid(nstar,ngrid,x,y,re,mm,psf_trun,xystar,galaxy)
 implicit none
 integer,intent(in) :: nstar,ngrid
 integer :: i,j,k,t1,t2,xi,yi,r1,r2
-real,intent(in) :: x,y,rPSF1,rPSF2
+real,intent(in) :: x,y,re,mm,psf_trun
 real,intent(in) :: xystar(nstar,3)
 real,intent(out) :: galaxy(ngrid,ngrid)
-real :: xp,yp,xs,ys
+real :: xp,yp,xs,ys,xo,yo
 real,external :: gauss
 real,external :: modffat
 galaxy=0.
-xi=aint(x)
-yi=aint(y)
-r1=aint((rPSF1+1)*2.)+1
-r2=aint((rPSF2+1)*2.)+1
+xo=ngrid/2.-x+1.
+yo=ngrid/2.-y+1.
+xi=aint(xo)
+yi=aint(yo)
+r1=aint(re*psf_trun+1.)+3
+r2=aint(re*psf_trun+1.)+3
 do i=1,nstar
 	xs=xystar(i,1)
 	ys=xystar(i,2)
@@ -112,11 +117,10 @@ do i=1,nstar
 	t2=anint(xystar(i,2))
 	do k=yi+t2-r2,yi+t2+r2
 	do j=xi+t1-r1,xi+t1+r1
-		
 		if(k<ngrid+1 .and. k>0 .and. j<ngrid+1 .and. j>0)then
-			xp=x+xs-j
-			yp=y+ys-k
-			galaxy(j,k)=galaxy(j,k)+xystar(i,3)*modffat(rPSF1,rPSF2,xp,yp)!gauss(rPSF1,rPSF2,xp,yp)!
+			xp=xo+xs-j
+			yp=yo+ys-k
+			galaxy(j,k)=galaxy(j,k)+xystar(i,3)*modffat(re,mm,psf_trun,xp,yp)!gauss(rPSF1,rPSF2,xp,yp)!
 		end if
 	end do
 	end do
@@ -124,17 +128,17 @@ end do
 return
 end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine mPSF(ngrid,rPSF1,rPSF2,a,b,PSF)
+subroutine mPSF(ngrid,re,mm,truncr,a,b,PSF)
 implicit none
 integer,intent(in) :: ngrid
-real,intent(in) :: a,b,rPSF1,rPSF2
+real,intent(in) :: a,b,re,mm,truncr
 real,intent(out) :: PSF(-1*ngrid/2:ngrid/2-1,-1*ngrid/2:ngrid/2-1)
 integer ::ia,ib
 real,external :: modffat
 PSF=0.
 	do ib=-1*ngrid/2,ngrid/2-1
 	do ia=-1*ngrid/2,ngrid/2-1
-		PSF(ia,ib)=modffat(rPSF1,rPSF2,ia+a,ib+b)
+		PSF(ia,ib)=modffat(re,mm,truncr,ia+a,ib+b)
 	end do
 	end do
 return
@@ -180,11 +184,11 @@ real,intent(out) :: PSF(-1*ngrid/2:ngrid/2-1,-1*ngrid/2:ngrid/2-1)
 integer ::ia,ib
 real,external :: flatdisk
 PSF=0.
-	do ib=-1*ngrid/2,ngrid/2-1
-	do ia=-1*ngrid/2,ngrid/2-1
-		PSF(ia,ib)=flatdisk(beta,ia+a,ib+b)
-	end do
-	end do
+do ib=-1*ngrid/2,ngrid/2-1
+do ia=-1*ngrid/2,ngrid/2-1
+	PSF(ia,ib)=flatdisk(beta,ia+a,ib+b)
+end do
+end do
 return
 end subroutine
 
