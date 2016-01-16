@@ -92,12 +92,35 @@ return
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine galaxyelli(nstar,eg,xystars,xystars2)
+implicit none
+integer,intent(in) :: nstar
+real,intent(in) :: eg
+real,intent(in) :: xystars(nstar,3)
+real,intent(out) :: xystars2(nstar,3)
+integer :: ig
+real :: ratio
 
-subroutine galaxyinGrid(nstar,ngrid,x,y,re,mm,psf_trun,xystar,galaxy)
+ratio=(1.-eg)**(1./2.)
+
+do ig=1,nstar
+	xystars2(ig,1)=xystars(ig,1)/ratio
+	xystars2(ig,2)=xystars(ig,2)*ratio
+	xystars2(ig,3)=xystars(ig,3)
+end do
+
+
+return
+end subroutine
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine galaxyinGrid(nstar,ngrid,x,y,re1,re2,mm,psf_trun,xystar,galaxy)
 implicit none
 integer,intent(in) :: nstar,ngrid
 integer :: i,j,k,t1,t2,xi,yi,r1,r2
-real,intent(in) :: x,y,re,mm,psf_trun
+real,intent(in) :: x,y,re1,re2,mm,psf_trun
 real,intent(in) :: xystar(nstar,3)
 real,intent(out) :: galaxy(ngrid,ngrid)
 real :: xp,yp,xs,ys,xo,yo
@@ -108,8 +131,8 @@ xo=ngrid/2.-x+1.
 yo=ngrid/2.-y+1.
 xi=aint(xo)
 yi=aint(yo)
-r1=aint(re*psf_trun+1.)+3
-r2=aint(re*psf_trun+1.)+3
+r1=aint(re1*psf_trun+1.)+3
+r2=aint(re2*psf_trun+1.)+3
 do i=1,nstar
 	xs=xystar(i,1)
 	ys=xystar(i,2)
@@ -120,7 +143,8 @@ do i=1,nstar
 		if(k<ngrid+1 .and. k>0 .and. j<ngrid+1 .and. j>0)then
 			xp=xo+xs-j
 			yp=yo+ys-k
-			galaxy(j,k)=galaxy(j,k)+xystar(i,3)*modffat(re,mm,psf_trun,xp,yp)!gauss(rPSF1,rPSF2,xp,yp)!
+			galaxy(j,k)=galaxy(j,k)+xystar(i,3)&
+			&*modffat(re1,re2,mm,psf_trun,xp,yp)!gauss(rPSF1,rPSF2,xp,yp)!
 		end if
 	end do
 	end do
@@ -128,17 +152,17 @@ end do
 return
 end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine mPSF(ngrid,re,mm,truncr,a,b,PSF)
+subroutine mPSF(ngrid,re1,re2,mm,truncr,a,b,PSF)
 implicit none
 integer,intent(in) :: ngrid
-real,intent(in) :: a,b,re,mm,truncr
+real,intent(in) :: a,b,re1,re2,mm,truncr
 real,intent(out) :: PSF(-1*ngrid/2:ngrid/2-1,-1*ngrid/2:ngrid/2-1)
 integer ::ia,ib
 real,external :: modffat
 PSF=0.
 	do ib=-1*ngrid/2,ngrid/2-1
 	do ia=-1*ngrid/2,ngrid/2-1
-		PSF(ia,ib)=modffat(re,mm,truncr,ia+a,ib+b)
+		PSF(ia,ib)=modffat(re1,re2,mm,truncr,ia+a,ib+b)
 	end do
 	end do
 return
@@ -213,28 +237,6 @@ PSF=0.
 return
 end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine qPSF(ngrid,a,b,PSF)
-implicit none
-integer,intent(in) :: ngrid
-real,intent(in) :: a,b
-real,intent(out) :: PSF(-1*ngrid/2:ngrid/2-1,-1*ngrid/2:ngrid/2-1)
-integer ::ia,ib
-real,external :: quadrupole
-PSF=0.
-	do ib=-1*ngrid/2,ngrid/2-1
-	do ia=-1*ngrid/2,ngrid/2-1
-		PSF(ia,ib)=quadrupole(ia+a,ib+b)
-	end do
-	end do
-return
-end subroutine
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 
 subroutine poissonoise(ngrid,seed,pn)

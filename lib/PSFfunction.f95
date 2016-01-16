@@ -47,19 +47,17 @@ end if
 return
 end function
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function modffat(re,mm,truncr,x,y)
+function modffat(re1,re2,mm,truncr,x,y)
 implicit none
 
  real :: modffat
  real,intent(in):: x,y
- real,intent(in) :: re,mm,truncr
- real :: r2,Rp
+ real,intent(in) :: re1,re2,mm,truncr
+ real :: r2
 
-
-Rp=re/sqrt(2.**(1./(mm-1.))-1.)
-
-if (x**2.+y**2.<(truncr*re)**2.) then
-	r2=(x**2.+y**2.)/Rp**2.
+r2=x**2./re1**2.+y**2./re2**2.
+if (r2<truncr**2.) then
+	r2=r2*(2.**(1./(mm-1.))-1.)
 	modffat=(1.+r2)**(-1.*mm)
 else
 	modffat=0.
@@ -105,24 +103,4 @@ if(abs(x)<=beta/2 .and. abs(y)<=beta/2) fang=1.
 
 return
 end function	
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function quadrupole(x,y)
-implicit none
-
- real :: quadrupole
- real,intent(in):: x,y
- real :: rd1,rd2,r2
-
-r2=x**2./rd1**2.+y**2./rd2**2.
-!if (r2<=25.) then
-	quadrupole=x**2.+y**2.
-!else
-!	modffat=0.
-!end if
-
-return
-end function
-
-
-
 

@@ -23,20 +23,21 @@ return
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine transformff(image,ngrid)
+subroutine transformff(ngrid,image,imageo)
 
 integer,intent(in) :: ngrid
-real,intent(inout) :: image(ngrid,ngrid)
+real,intent(in) :: image(ngrid,ngrid)
+real,intent(out) :: imageo(ngrid,ngrid)
 complex :: imagec(ngrid,ngrid)
 call transform(image,imagec,ngrid)
-image=abs(imagec)**2.
+imageo=abs(imagec)**2.
 
 return
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine transformfi(image,ngrid,imageout)
+subroutine transformfi(ngrid,image,imageout)
 implicit none
   integer,intent(in) :: ngrid
   real,intent(in) :: image(ngrid,ngrid)

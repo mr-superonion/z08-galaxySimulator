@@ -66,28 +66,14 @@ subroutine getep(ngrid,image,ep1,ep2)
 implicit none
 integer,intent(in) :: ngrid
 real,intent(in) :: image(ngrid,ngrid)
-real :: image1(ngrid,ngrid)
 real,intent(out) :: ep1,ep2
-integer :: xm,ym
-real :: x,y
-real :: Q11,Q20,Q02,Q10,Q01,Q00,imax
+real :: Q11,Q20,Q02
 integer :: i,j
 
-image1=image
-call getmax(image1,ngrid,imax,xm,ym)
-do j=1,ngrid
-do i=1,ngrid
-	if (image1(i,j)<0.5*imax) image1(i,j)=0.
-end do
-end do
-call calQua0(ngrid,0.,0.,image1,0,0,Q00)
-call calQua0(ngrid,0.,0.,image1,1,0,Q10)
-call calQua0(ngrid,0.,0.,image1,0,1,Q01)
-x=Q10/Q00
-y=Q01/Q00
-call calQua0(ngrid,x,y,image1,2,0,Q20)
-call calQua0(ngrid,x,y,image1,1,1,Q11)
-call calQua0(ngrid,x,y,image1,0,2,Q02)
+
+call calQua0(ngrid,0.,0.,image,2,0,Q20)
+call calQua0(ngrid,0.,0.,image,1,1,Q11)
+call calQua0(ngrid,0.,0.,image,0,2,Q02)
 ep1=(Q20-Q02)/(Q20+Q02)
 ep2=2.*Q11/(Q20+Q02)
 
@@ -109,10 +95,11 @@ real,intent(in) :: ratio
 
 
 !call getmax(image,ngrid,imax,x,y)
+! set the origin at ngrid/2+1
 x=ngrid/2+1
 y=ngrid/2+1
 call getflux(image,ngrid,sumim,maxradius)
-! begin from HLR=2
+! begin from HLR=sqrt(3)
 radius=3.
 do rrr=1,ngrid*ngrid
 	radius=radius+1.
@@ -126,11 +113,7 @@ do rrr=1,ngrid*ngrid
 	end if		
 end do
 radius=sqrt(radius)
-!call getep(ngrid,image,ep1,ep2)
-!ep=sqrt(ep1**2.+ep2**2.)
-!bsa=sqrt((1-ep)/(1+ep))
-!write(*,*) bsa
-!radius=radius/(1.+bsa)*2.
+
 return
 end subroutine
 
@@ -146,29 +129,23 @@ real,intent(out) :: flux
 integer,intent(in) :: ngrid
 real,intent(in) :: image(ngrid,ngrid)
 
-maxradius=ngrid/2-3
 !call getmax(image,ngrid,imax,x,y)
 x=ngrid/2+1
 y=ngrid/2+1
 fluxr=0.
-do rrr=2,ngrid/2-3
+maxradius=ngrid/2-2
+do rrr=2,ngrid/2-2
 	imagecount=0.
 	forall(m=1:ngrid,n=1:ngrid,(m-x)**2.+(n-y)**2.<=rrr**2.)
 		imagecount(m,n)=image(m,n)
 	end forall
 	fluxr(rrr)=sum(imagecount)
 	if (fluxr(rrr)<=fluxr(rrr-1)) then
-		maxradius=rrr-1 
+		maxradius=max(rrr-1,4)
 		exit
 	end if
 end do
-maxradius=max(maxradius,4)
 flux=fluxr(maxradius)
-!call getep(ngrid,image,ep1,ep2)
-!ep=sqrt(ep1**2.+ep2**2.)
-!bsa=sqrt((1-ep)/(1+ep))
-!write(*,*) bsa
-!radius=radius/(1.+bsa)*2.
 return
 end subroutine
 
@@ -197,33 +174,7 @@ return
 end subroutine
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-subroutine getSNR(image,ngrid,SNR)
-! this subroutine is used to calculate the signal to noise ratio approximately
-implicit none
-real,intent(in) :: image(ngrid,ngrid)
-integer,intent(in) :: ngrid
-real,intent(out) :: SNR
-integer :: x,y,m,n,nn
-real :: ratio,imax,radius
-ratio=0.5
-!call getmax(image,ngrid,imax,x,y)
-x=ngrid/2+1
-y=ngrid/2+1
-call getradius(image,ngrid,ratio,radius)
-SNR=0.
-do n=y-aint(radius),y+aint(radius)
-do m=x-aint(radius),x+aint(radius)
-	nn=nn+1
-	SNR=SNR+image(m,n)
-end do
-end do
-SNR=SNR/(radius)/2.
-
-return
-end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -248,5 +199,47 @@ error2=stdup2/down/sqrt(ng)
 
 return
 end subroutine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+
+subroutine getshearF3(galaxy1,PSF1,ngrid,up1,up2,down)
+implicit none
+ real,parameter :: pi=acos(-1.)
+ integer,intent(in) :: ngrid
+ real,intent(in) :: galaxy1(ngrid,ngrid)
+ real,intent(in) :: PSF1(ngrid,ngrid)
+ real,intent(out) :: up1,up2,down
+ real :: PSFweight(ngrid,ngrid),PSFu(ngrid,ngrid)
+ real :: galaxyu(ngrid,ngrid)
+ real :: rfour,rtarget,Q20,Q02,Q11,Q40,Q04,Q22,D4
+ integer :: i,j
+! calculate the HLR of Fourier Mode
+PSFu=PSF1
+call getradius(PSFu,ngrid,exp(-1.),rfour)
+rfour=rfour*0.5
+rtarget=1./sqrt(2.)/(rfour)*ngrid/2./pi
+
+forall (j=1:ngrid, i=1:ngrid, PSFu(i,j)<PSFu(ngrid/2+1,ngrid/2+1)/1.e4)
+	PSFu(i,j)=10.e7
+end forall
+!Gaussianization
+call gPSF(ngrid,rfour,rfour,0.,0.,PSFweight)
+PSFweight=PSFweight/PSFu
+galaxyu=galaxy1*PSFweight
+
+!calculate the moments of galaxy
+call calQua(ngrid,galaxyu,2,0,Q20)
+call calQua(ngrid,galaxyu,1,1,Q11)
+call calQua(ngrid,galaxyu,0,2,Q02)
+call calQua(ngrid,galaxyu,4,0,Q40)
+call calQua(ngrid,galaxyu,2,2,Q22)
+call calQua(ngrid,galaxyu,0,4,Q04)
+D4   = Q40+2.*Q22+Q04
+down = Q20+Q02-0.5*(rtarget*2*pi/(ngrid))**2*D4
+up1  = -1.*(Q20-Q02)
+up2  = -1.*Q11
+return
+end subroutine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
