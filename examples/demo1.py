@@ -6,8 +6,8 @@ import numpy as np
 import pyfits
 import random
 
-ndgal=10 # different galaxies generated for each shear
-nshear=7 # number of shear
+ndgal=12 # different galaxies generated for each shear
+nshear=1 # number of shear
 nrot=4 # galaxy are rotated by 4 times
 nstar=80 # how many point source is used in the simulation of each galaxy
 ngrid=32 # size of grid
@@ -26,7 +26,8 @@ gamma2=np.array([-0.02102185, -0.02953631 ,0.02967116,-0.01457094,0.02965902,0.0
 #Creat array to store galaxy image
 galimage=np.zeros((ndgal*ngrid,nshear*ngrid))
 #array to store coordinates of point sources
-xystaro=np.zeros((nstar,3));xystar=np.zeros((nstar,3))
+xystaro=np.zeros((nstar,3))
+xystar=np.zeros((nstar,3))
 for ishear in range(nshear):
     for igal in range(ndgal): 
         # determine the intrinsic shape of galaxy
@@ -35,15 +36,15 @@ for ishear in range(nshear):
             xystaro=galsp.galaxygenerate(nstar,radius,gal_n,rgal)
             #add intrinsic ellipticity to galaxy
             #ellipticity for intrinsic galaxy
-            #gal_e1=random.uniform(-0.1,0.1) ;gal_e2=random.uniform(-0.1,0.1)
-            #xystaro=galsp.galaxyshear(gal_e1,gal_e2,xystaro)
+            gal_e=random.uniform(-0.1,0.1)
+            xystaro=galsp.galaxyelli(gal_e,xystaro)
         else:
             xystaro=galsp.galaxyrot(np.pi/4,xystaro)
         # add shear
         xystar=galsp.galaxyshear(gamma1[ishear],gamma2[ishear],xystaro)
         #array to store one galaxy image
         galaxy1=np.zeros((ngrid,ngrid))
-        galaxy1=galsp.galaxyingrid(ngrid,0.,0.,rpsf,m_psf,truncr,xystar)
+        galaxy1=galsp.galaxyingrid(ngrid,0.,0.,rpsf,rpsf,m_psf,truncr,xystar)
         galaxy1=galaxy1/sum(sum(galaxy1))
         #print galsp.calqua0(0,0,galaxy1,0,1)
         for iy in range(ngrid):
@@ -53,7 +54,7 @@ for ishear in range(nshear):
 
 #PSFimage
 psfimage=np.zeros((ngrid,ngrid))
-psfimage=galsp.mpsf(ngrid,rpsf,m_psf,truncr,0,0,)
+psfimage=galsp.mpsf(ngrid,rpsf,rpsf,m_psf,truncr,0,0,)
 
 galimage=np.transpose(galimage)
 psfimage=np.transpose(psfimage)
