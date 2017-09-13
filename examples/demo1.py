@@ -6,6 +6,9 @@ import numpy as np
 import pyfits
 import random
 
+
+
+
 ndgal=12 # different galaxies generated for each shear
 nshear=1 # number of shear
 nrot=4 # galaxy are rotated by 4 times
