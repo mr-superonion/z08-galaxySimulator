@@ -1,4 +1,4 @@
-# Galaxy Simulatior using Point Source
+# Galaxy Simulator using Point Source
 
 
 
